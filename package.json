@@ -1,0 +1,27 @@
+{
+  "name": "subfuse",
+  "version": "1.0.0",
+  "description": "Next-Gen Multi-Airport Subscription Aggregator & Failover Proxy Switcher",
+  "main": "src/main.js",
+  "type": "module",
+  "author": {
+    "name": "SubFuse Team"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test core/test.js",
+    "build": "electron-builder build",
+    "build:mac": "electron-builder build --mac",
+    "build:win": "electron-builder build --win",
+    "build:all": "electron-builder build --mac --win"
+  },
+  "dependencies": {
+    "https-proxy-agent": "^9.1.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3"
+  }
+}

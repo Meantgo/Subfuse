@@ -1,0 +1,44 @@
+appId: com.subfuse.desktop
+productName: SubFuse
+copyright: Copyright © 2026 SubFuse
+directories:
+  output: dist
+  buildResources: assets
+
+files:
+  - "src/**/*"
+  - "core/**/*"
+  - "assets/**/*"
+  - "package.json"
+
+mac:
+  category: public.app-category.utilities
+  icon: assets/icon.icns
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
+  hardenedRuntime: false
+  gatekeeperAssess: false
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  window:
+    width: 540
+    height: 380
+
+win:
+  icon: assets/icon.ico
+  target:
+    - target: zip
+      arch:
+        - x64

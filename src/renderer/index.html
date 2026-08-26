@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SubFuse - 全机进程自适应路由与多机场容灾切换器</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Custom Titlebar for Windows / Non-Mac -->
+  <div id="win-titlebar" class="win-titlebar" style="display: none;">
+    <div class="win-title">
+      <img src="../../assets/logo.svg" alt="logo" class="win-logo">
+      <span>SubFuse</span>
+    </div>
+    <div class="win-controls">
+      <button id="btn-win-min" class="win-btn" title="最小化">─</button>
+      <button id="btn-win-max" class="win-btn" title="最大化">□</button>
+      <button id="btn-win-close" class="win-btn win-close" title="关闭">✕</button>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-brand">
+        <img src="../../assets/logo.svg" alt="SubFuse" class="app-logo">
+        <div class="brand-text">
+          <div class="app-name">SubFuse</div>
+          <div class="app-sub">全机进程自适应路由 · 多机场容灾切换器</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-paste-all" class="btn-tool" title="自动识别剪贴板内容并解析拆分">智能粘贴</button>
+        <button id="btn-demo" class="btn-tool" title="填入演示配置快速体验">填入演示</button>
+      </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="content-body">
+      <!-- 1. 机场订阅链接输入与合并区 -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">机场订阅链接</span>
+          <button id="btn-add-sub" class="btn-link">+ 添加机场</button>
+        </div>
+
+        <div id="sub-container" class="sub-container">
+          <!-- 动态订阅行 -->
+        </div>
+
+        <!-- 动态订阅链接提示 -->
+        <div class="sub-dynamic-tip">
+          <span class="tip-dot"></span>
+          <span>提示：若机场节点为动态更新，请确保使用最新的订阅链接</span>
+        </div>
+
+        <!-- 合并配置按钮紧随在填完链接后面 -->
+        <div class="merge-action-bar">
+          <button id="btn-submit" class="btn-merge">
+            <span class="btn-text">合并配置</span>
+          </button>
+          <div id="merge-status-badge" class="status-badge ready">等待合并</div>
+        </div>
+      </section>
+
+      <!-- 2. 分流模式选择区 (自动规则 / 全局手动代理) -->
+      <section class="card">
+        <div class="card-head">
+          <span class="card-title">分流模式</span>
+        </div>
+
+        <div class="mode-tabs">
+          <div class="mode-tab active" id="tab-auto" data-mode="auto">
+            <div class="tab-top">
+              <span class="tab-title">自动规则</span>
+              <span class="tab-pill">推荐</span>
+            </div>
+            <div class="tab-desc">全机进程自适应路由，国内直连海外优选，AI 定向防封</div>
+          </div>
+          <div class="mode-tab" id="tab-global" data-mode="global">
+            <div class="tab-top">
+              <span class="tab-title">全局手动代理</span>
+            </div>
+            <div class="tab-desc">整机所有流量锁定指定单一节点，稳定不切换</div>
+          </div>
+        </div>
+
+        <!-- 全局手动代理面板 (当选中全局手动代理时显示) -->
+        <div id="panel-global-select" class="mode-panel" style="display: none;">
+          <div class="field-row">
+            <span class="field-label">全局指定节点：</span>
+            <select id="select-global-node" class="dropdown">
+              <option value="">（合并配置后在此选择指定节点）</option>
+            </select>
+          </div>
+          <div class="field-note">整机全部流量将走该固定节点，不进行任何动态测速漂移</div>
+        </div>
+
+        <!-- 自动规则面板 (当选中自动规则时显示) -->
+        <div id="panel-auto-rules" class="mode-panel">
+          <!-- AI 防封固定节点设置 -->
+          <div class="ai-box">
+            <div class="field-row">
+              <div class="field-label-group">
+                <span class="field-label">AI 锁定节点：</span>
+                <span class="pill-green">防封专用</span>
+              </div>
+              <select id="select-ai-node" class="dropdown">
+                <option value="">自动优选低延迟专线</option>
+              </select>
+            </div>
+            <div class="field-note">Claude / ChatGPT / Cursor 等 AI 应用定向走此稳定节点，彻底杜绝频繁换 IP 封号</div>
+          </div>
+
+          <!-- 自适应进程列表 -->
+          <div class="proc-box">
+            <div class="proc-head">
+              <div class="proc-head-left">
+                <span class="proc-title">全机进程自适应规则</span>
+                <span id="proc-count-badge" class="badge-count">扫描中...</span>
+              </div>
+              <div class="proc-head-right">
+                <button id="btn-refresh-procs" class="btn-link-sm" title="重新扫描本机进程">重新扫描</button>
+                <button id="btn-add-custom-proc" class="btn-link-sm">+ 添加进程</button>
+              </div>
+            </div>
+
+            <div id="process-list" class="process-list">
+              <!-- 动态加载真实本机进程自适应规则 -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 底部连接与启动控制 -->
+      <section class="connect-box">
+        <button id="btn-toggle-connect" class="btn-connect">
+          <span id="btn-connect-text">启动代理</span>
+        </button>
+
+        <div class="connect-info-row">
+          <div class="status-left">
+            <span id="conn-dot" class="conn-dot offline"></span>
+            <span id="conn-status-text">未连接</span>
+          </div>
+          <div class="status-right">
+            <label class="notif-label" title="切换节点时桌面通知">
+              <input type="checkbox" id="toggle-notif" checked>
+              <span>节点切换提醒</span>
+            </label>
+            <button id="btn-test-failover" class="btn-test-failover" title="模拟某应用网络受阻时的秒切体验">测试自愈</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

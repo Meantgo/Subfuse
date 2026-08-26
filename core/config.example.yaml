@@ -1,0 +1,29 @@
+# 多机场订阅自动切换器 - 配置示例
+#
+# 用法：
+#   1. 复制本文件为 config.yaml
+#   2. 把下面的 url 换成你的订阅链接（可以加 2~5 个）
+#   3. 运行：python3 build_config.py
+#   4. 把生成的 merged.yaml 导入 Clash Verge 即可
+
+# 输出文件名
+output: "merged.yaml"
+
+# 健康检查地址（保持默认即可）
+health_url: "http://www.gstatic.com/generate_204"
+
+# 健康检查间隔（秒）。越小切换越快，但会多耗一点流量
+check_interval: 30
+
+# 延迟容差（毫秒）。同一批节点延迟差小于这个值不切换，避免抖动
+tolerance: 80
+
+# 抓取订阅时是否走本地代理（订阅链接被墙时打开，例如 127.0.0.1:7897）
+fetch_proxy: "http://127.0.0.1:7897"
+
+# 你的订阅列表：name 随便起，url 换成你的真实订阅链接
+subscriptions:
+  - name: "机场A"
+    url: "https://example.com/api/v1/client/subscribe?token=xxxx"
+  - name: "机场B"
+    url: "https://example.org/sub?token=yyyy"

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F2FE" />
+      <stop offset="100%" stop-color="#4FACFE" />
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F43F5E" />
+      <stop offset="100%" stop-color="#EC4899" />
+    </linearGradient>
+    <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#34D399" />
+    </linearGradient>
+    <linearGradient id="coreG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#818CF8" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Base frame -->
+  <rect x="2" y="2" width="44" height="44" rx="11" fill="#0B0F19" stroke="#1E293B" stroke-width="1.5" />
+  <!-- Converging stream paths -->
+  <path d="M 8 13 C 16 13, 20 24, 26 24" stroke="url(#g1)" stroke-width="2.5" stroke-linecap="round" filter="url(#glow)" />
+  <path d="M 7 24 L 26 24" stroke="url(#g2)" stroke-width="2.5" stroke-linecap="round" filter="url(#glow)" />
+  <path d="M 8 35 C 16 35, 20 24, 26 24" stroke="url(#g3)" stroke-width="2.5" stroke-linecap="round" filter="url(#glow)" />
+  <!-- Outbound synthesized beam -->
+  <path d="M 26 24 L 41 24" stroke="#00F0FF" stroke-width="3" stroke-linecap="round" filter="url(#glow)" />
+  <path d="M 26 24 L 41 24" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" />
+  <!-- Input nodes -->
+  <circle cx="9" cy="13" r="2.5" fill="#00F2FE" />
+  <circle cx="8" cy="24" r="2.5" fill="#EC4899" />
+  <circle cx="9" cy="35" r="2.5" fill="#10B981" />
+  <circle cx="40" cy="24" r="2.5" fill="#00F0FF" />
+  <!-- Nexus ring -->
+  <circle cx="26" cy="24" r="6.5" fill="#0F172A" stroke="url(#coreG)" stroke-width="2" />
+  <polygon points="26,20 29.5,24 26,28 22.5,24" fill="#00F0FF" />
+  <circle cx="26" cy="24" r="1.5" fill="#FFFFFF" />
+</svg>
