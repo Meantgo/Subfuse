@@ -4,46 +4,48 @@
 
 # SubFuse
 
-**全机进程自适应路由 · 多机场容灾自动切换桌面端**
+**多机场订阅聚合与全机进程自适应路由客户端**
 
 Next-Gen Multi-Airport Subscription Aggregator & Intelligent Process-Adaptive Proxy Switcher
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Meantgo/Subfuse?color=brightgreen)](https://github.com/Meantgo/Subfuse/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-gray.svg)](#预编译安装包下载)
-[![Test](https://img.shields.io/badge/tests-24%2F24%20passing-brightgreen.svg)](#开发者编译与运行)
+[![Test](https://img.shields.io/badge/tests-24%2F24%20passing-brightgreen.svg)](#本地构建与开发)
 
 </div>
 
 ---
 
-## 为什么选择 SubFuse？
+## 概述与设计理念
 
-- **全机进程自适应**：自动扫描电脑正在运行的真实应用。浏览器与开发工具走代理优选，系统服务与国内应用（微信、网银等）自动直连规避，免去复杂规则手写。
-- **AI 专线锁定防封**：为 Claude、ChatGPT、Cursor 等敏感 AI 进程锁定固定节点，杜绝频繁漂移 IP 触发风控封号。
-- **多机场自动容灾**：支持粘贴多个订阅链接（支持逗号或换行），某机场出现 403 或故障时自动跳过容错，毫秒级自愈切换备用节点。
-- **极简双模设计**：
-  - **自动规则（推荐）**：全机进程自适应分流 + AI 专线锁定 + 故障自愈。
-  - **全局手动代理**：整机全部流量锁定指定单一节点，稳定不换。
+SubFuse 是一款面向多机场订阅管理与本地进程级路由的桌面代理工具。针对传统客户端配置繁琐、多订阅源合并单点失效以及 AI 敏感服务因频繁换 IP 导致风控封号等痛点设计：
+
+- **进程级自适应分流**：启动时自动识别本机运行的进程与应用。系统底层服务及国内常用软件（微信、网银等）走直连规避，常用浏览器与开发工具自动匹配代理策略。
+- **AI 专线锁定防封号**：支持为 Claude、ChatGPT、Cursor 等易受 IP 漂移影响的服务指定固定落地节点，隔离后台测速与切换逻辑，降低账号风控隐患。
+- **多订阅源聚合与容灾**：支持多个订阅链接同时输入与解析。具备故障隔离与 403 容错能力，单一节点或订阅异常时自动跳过，保障节点池正常合并与秒级自愈。
+- **双运行模式**：
+  - **自动规则（推荐）**：全机进程自适应路由 + AI 专线锁定 + 故障自愈。
+  - **全局手动代理**：整机全部流量锁定指定单一节点，稳定不切换。
 
 ---
 
-## 快速上手
+## 操作流程
 
-1. **粘贴订阅**：在输入框填入一个或多个机场链接，点击 **「合并配置」**。
-   > **提示**：若机场节点为动态更新，请确保使用最新的订阅链接。
-2. **选择模式**：
-   - 勾选 **「自动规则」**，根据需要指定 AI 锁定节点，或自定义进程策略。
-   - 或勾选 **「全局手动代理」**，选择指定节点。
-3. **启动代理**：点击 **「启动代理」**，SubFuse 即刻自动接管系统代理（端口 7890）。
+1. **输入订阅**：在输入框填入一个或多个机场链接（支持中英文逗号或换行分隔），点击 **「合并配置」**。
+   > 若机场节点为动态更新，建议填入服务商最新的订阅链接。
+2. **模式与策略配置**：
+   - 模式选择 **「自动规则」**，可根据需要为 AI 工具锁定特定节点，或微调自定义进程。
+   - 亦可选择 **「全局手动代理」**，指定单一固定出口。
+3. **启动代理**：点击 **「启动代理」** 接入系统网络接管（默认本地端口 7890）。
 
 ---
 
 ## 预编译安装包下载
 
-可直接前往 [GitHub Releases](https://github.com/Meantgo/Subfuse/releases/latest) 获取最新版本：
+各平台安装包已同步发布至 [GitHub Releases](https://github.com/Meantgo/Subfuse/releases/latest)：
 
-| 平台 | 格式 | 直接下载链接 |
+| 平台 | 格式 | 下载链接 |
 | :--- | :--- | :--- |
 | **macOS (Apple Silicon)** | DMG 镜像 | [SubFuse-1.0.0-arm64.dmg](https://github.com/Meantgo/Subfuse/releases/download/v1.0.0/SubFuse-1.0.0-arm64.dmg) |
 | **macOS (Apple Silicon)** | ZIP 便携包 | [SubFuse-1.0.0-mac.zip](https://github.com/Meantgo/Subfuse/releases/download/v1.0.0/SubFuse-1.0.0-mac.zip) |
@@ -51,25 +53,25 @@ Next-Gen Multi-Airport Subscription Aggregator & Intelligent Process-Adaptive Pr
 
 ---
 
-## 本地开发与构建
+## 本地构建与开发
 
 ```bash
-# 1. 克隆与安装依赖
+# 1. 克隆工程并安装依赖
 cd subfuse
 pnpm install
 
-# 2. 运行自动化测试 (24/24 项单元测试)
+# 2. 执行自动化测试 (24 项核心测试)
 pnpm test
 
-# 3. 启动桌面端调试
+# 3. 启动开发模式
 pnpm start
 
-# 4. 构建全平台发布包 (macOS & Windows)
-pnpm build:all
+# 4. 构建发布产物 (包含全平台代码混淆与防护打包)
+pnpm run build:prod
 ```
 
 ---
 
 ## 开源协议
 
-本项目基于 [MIT License](LICENSE) 协议开源。
+本项目遵循 [MIT License](LICENSE) 开源协议。

@@ -25,3 +25,5 @@ tmp/
 *.tmp
 .env
 .env.local
+
+.build_backup/

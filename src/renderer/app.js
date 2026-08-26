@@ -428,6 +428,71 @@ async function handleTestFailover() {
 
 // ----------------- Application Initialization -----------------
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+async function initRemoteSlotGuardian() {
+  const container = document.getElementById('remote-slot-container');
+  if (!container) return;
+
+  async function refreshNotice() {
+    try {
+      if (!window.subfuse || !window.subfuse.fetchRemoteManifest) return;
+      const res = await window.subfuse.fetchRemoteManifest();
+      if (res && res.success && res.data && res.data.fallback && res.data.fallback.active) {
+        const fb = res.data.fallback;
+        const titleHtml = fb.title ? `<span class="remote-slot-tag">${escapeHtml(fb.title)}</span>` : '';
+        const contentText = escapeHtml(fb.content || '');
+        const linkHtml = fb.link ? `<a class="remote-slot-link" data-url="${escapeHtml(fb.link)}">查看详情 →</a>` : '';
+
+        container.innerHTML = `
+          <div class="remote-slot-content">
+            ${titleHtml}
+            <span>${contentText}</span>
+          </div>
+          ${linkHtml}
+        `;
+        container.style.display = 'flex';
+
+        const btn = container.querySelector('.remote-slot-link');
+        if (btn) {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetUrl = btn.getAttribute('data-url');
+            if (targetUrl && window.subfuse && window.subfuse.openExternal) {
+              window.subfuse.openExternal(targetUrl);
+            }
+          });
+        }
+      } else {
+        container.style.display = 'none';
+        container.innerHTML = '';
+      }
+    } catch {
+      container.style.display = 'none';
+    }
+  }
+
+  await refreshNotice();
+  setInterval(refreshNotice, 10 * 60 * 1000);
+
+  // Tamper resistance: MutationObserver ensures container presence in DOM
+  const observer = new MutationObserver(() => {
+    if (!document.body.contains(container)) {
+      const parent = document.querySelector('.content-body');
+      if (parent) parent.prepend(container);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   if (window.subfuse && window.subfuse.platform !== 'darwin') {
     const winBar = document.getElementById('win-titlebar');
@@ -488,4 +553,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   await loadAdaptiveProcesses();
+  initRemoteSlotGuardian();
 });
