@@ -70,6 +70,15 @@ pnpm start
 pnpm run build:prod
 ```
 
+> **构建提示**：国内网络下 electron-builder 从 GitHub 下载 Electron 二进制
+> 可能被限流（429），构建前先设置镜像：
+> ```bash
+> export ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
+> export ELECTRON_BUILDER_BINARIES_MIRROR="https://npmmirror.com/mirrors/electron-builder-binaries/"
+> ```
+> 依赖已在 `pnpm-workspace.yaml` 固定 `@electron/get@3.1.0`（3.0.0 发布版
+> 缺失 electron-builder 需要的导出，会导致构建崩溃）。
+
 ---
 
 ## 开源协议

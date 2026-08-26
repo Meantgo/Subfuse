@@ -71,7 +71,8 @@ try {
   }
 
   console.log('>>> [3/5] Packaging closed-source Electron binaries for macOS and Windows...');
-  execSync('node ./node_modules/.bin/electron-builder build --mac --win', { cwd: rootDir, stdio: 'inherit', env: process.env });
+  // 直接用 electron-builder 的 JS 入口（pnpm 的 .bin 是 shell shim，node 无法解析）
+  execSync('node ./node_modules/electron-builder/out/cli/cli.js build --mac --win', { cwd: rootDir, stdio: 'inherit', env: process.env });
 
   console.log('>>> [4/5] Syncing release packages to outputs/...');
   const outputsDir = path.resolve(rootDir, '../outputs');
