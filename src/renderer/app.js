@@ -484,6 +484,9 @@ function initCompliantAdSlot() {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  if (window.subfuse && window.subfuse.platform === 'darwin') {
+    document.body.classList.add('platform-darwin');
+  }
   if (window.subfuse && window.subfuse.platform !== 'darwin') {
     const winBar = document.getElementById('win-titlebar');
     if (winBar) winBar.style.display = 'flex';

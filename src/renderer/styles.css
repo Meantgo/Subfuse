@@ -128,6 +128,11 @@ body {
   flex-shrink: 0;
 }
 
+/* macOS：为原生红绿灯按钮让位，避免遮挡 logo 一行 */
+.platform-darwin .header {
+  padding-left: 78px;
+}
+
 .header-brand {
   display: flex;
   align-items: center;
