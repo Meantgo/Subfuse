@@ -9,6 +9,7 @@
 Next-Gen Multi-Airport Subscription Aggregator & Intelligent Process-Adaptive Proxy Switcher
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Meantgo/Subfuse?color=brightgreen)](https://github.com/Meantgo/Subfuse/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-gray.svg)](#预编译安装包下载)
 [![Test](https://img.shields.io/badge/tests-24%2F24%20passing-brightgreen.svg)](#开发者编译与运行)
 
@@ -40,13 +41,13 @@ Next-Gen Multi-Airport Subscription Aggregator & Intelligent Process-Adaptive Pr
 
 ## 预编译安装包下载
 
-Release 安装包位于 `outputs/` 目录中：
+可直接前往 [GitHub Releases](https://github.com/Meantgo/Subfuse/releases/latest) 获取最新版本：
 
-| 平台 | 格式 | 文件路径 |
+| 平台 | 格式 | 直接下载链接 |
 | :--- | :--- | :--- |
-| **macOS (Apple Silicon)** | DMG 镜像 | `outputs/SubFuse-1.0.0-arm64.dmg` |
-| **macOS (Apple Silicon)** | ZIP 便携包 | `outputs/SubFuse-1.0.0-mac.zip` |
-| **Windows (x64)** | ZIP 免安装包 | `outputs/SubFuse-1.0.0-win-x64.zip` |
+| **macOS (Apple Silicon)** | DMG 镜像 | [SubFuse-1.0.0-arm64.dmg](https://github.com/Meantgo/Subfuse/releases/download/v1.0.0/SubFuse-1.0.0-arm64.dmg) |
+| **macOS (Apple Silicon)** | ZIP 便携包 | [SubFuse-1.0.0-mac.zip](https://github.com/Meantgo/Subfuse/releases/download/v1.0.0/SubFuse-1.0.0-mac.zip) |
+| **Windows (x64)** | ZIP 免安装包 | [SubFuse-1.0.0-win-x64.zip](https://github.com/Meantgo/Subfuse/releases/download/v1.0.0/SubFuse-1.0.0-win-x64.zip) |
 
 ---
 
