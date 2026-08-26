@@ -428,6 +428,24 @@ async function handleTestFailover() {
 
 // ----------------- Application Initialization -----------------
 
+// ------------------------------------------------------------
+// 广告位占位（合规版，当前未启用）
+// 现在没有广告：LOCAL_AD_SLOT 为 null，不会渲染任何内容。
+// 未来接入广告时只允许以下合规形态：
+//   1) 用户可见，并明确标注「广告 / 推广」；
+//   2) 可一键关闭，关闭状态本地持久保存，绝不强制常驻；
+//   3) 内容仅来自本地配置或 HTTPS 接口，并在应用设置中披露；
+// 禁止：隐藏注入、防删除/防关闭、明文 HTTP、无披露的远程内容。
+// ------------------------------------------------------------
+const LOCAL_AD_SLOT = null;
+// 接入示例（启用时替换上面的 null）：
+// const LOCAL_AD_SLOT = {
+//   title: "赞助商",
+//   content: "赞助说明文字",
+//   link: "https://example.com",
+//   closable: true,
+// };
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -438,59 +456,31 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-async function initRemoteSlotGuardian() {
-  const container = document.getElementById('remote-slot-container');
-  if (!container) return;
+function initCompliantAdSlot() {
+  const ad = LOCAL_AD_SLOT;
+  if (!ad) return; // 占位：无广告时不渲染任何内容
+  try {
+    if (localStorage.getItem('subfuse-ad-closed') === '1') return; // 用户已关闭，尊重选择
+  } catch {}
 
-  async function refreshNotice() {
-    try {
-      if (!window.subfuse || !window.subfuse.fetchRemoteManifest) return;
-      const res = await window.subfuse.fetchRemoteManifest();
-      if (res && res.success && res.data && res.data.fallback && res.data.fallback.active) {
-        const fb = res.data.fallback;
-        const titleHtml = fb.title ? `<span class="remote-slot-tag">${escapeHtml(fb.title)}</span>` : '';
-        const contentText = escapeHtml(fb.content || '');
-        const linkHtml = fb.link ? `<a class="remote-slot-link" data-url="${escapeHtml(fb.link)}">查看详情 →</a>` : '';
+  const container = document.createElement('div');
+  container.className = 'compliant-ad-slot';
+  container.innerHTML = `
+    <span class="compliant-ad-tag">广告</span>
+    <span class="compliant-ad-content">${escapeHtml(ad.content || '')}</span>
+    ${ad.link ? `<a class="compliant-ad-link" href="${escapeHtml(ad.link)}" target="_blank" rel="noopener">详情</a>` : ''}
+    <button class="compliant-ad-close" type="button" title="关闭广告">×</button>
+  `;
 
-        container.innerHTML = `
-          <div class="remote-slot-content">
-            ${titleHtml}
-            <span>${contentText}</span>
-          </div>
-          ${linkHtml}
-        `;
-        container.style.display = 'flex';
-
-        const btn = container.querySelector('.remote-slot-link');
-        if (btn) {
-          btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const targetUrl = btn.getAttribute('data-url');
-            if (targetUrl && window.subfuse && window.subfuse.openExternal) {
-              window.subfuse.openExternal(targetUrl);
-            }
-          });
-        }
-      } else {
-        container.style.display = 'none';
-        container.innerHTML = '';
-      }
-    } catch {
-      container.style.display = 'none';
-    }
+  const closeBtn = container.querySelector('.compliant-ad-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      container.remove();
+      try { localStorage.setItem('subfuse-ad-closed', '1'); } catch {}
+    });
   }
-
-  await refreshNotice();
-  setInterval(refreshNotice, 10 * 60 * 1000);
-
-  // Tamper resistance: MutationObserver ensures container presence in DOM
-  const observer = new MutationObserver(() => {
-    if (!document.body.contains(container)) {
-      const parent = document.querySelector('.content-body');
-      if (parent) parent.prepend(container);
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+  const anchor = document.querySelector('.content-body') || document.body;
+  anchor.prepend(container);
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -553,5 +543,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   await loadAdaptiveProcesses();
-  initRemoteSlotGuardian();
+  initCompliantAdSlot();
 });

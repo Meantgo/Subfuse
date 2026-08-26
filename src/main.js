@@ -419,25 +419,6 @@ ipcMain.handle('open-directory', (_event, dirPath) => {
   return false;
 });
 
-ipcMain.handle('fetch-remote-manifest', async () => {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3500);
-    const resp = await fetch('http://8.148.238.253/api/v1/subfuse/notice', {
-      signal: controller.signal,
-      headers: { 'User-Agent': 'SubFuse-Desktop-Guardian/1.0' }
-    });
-    clearTimeout(timeout);
-    if (resp.ok) {
-      const data = await resp.json();
-      return { success: true, data };
-    }
-  } catch (err) {
-    // Non-blocking fail-safe
-  }
-  return { success: false, data: { fallback: { active: false } } };
-});
-
 ipcMain.handle('open-external', (_event, url) => {
   shell.openExternal(url);
   return true;

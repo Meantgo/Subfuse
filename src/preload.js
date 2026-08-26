@@ -18,7 +18,6 @@ contextBridge.exposeInMainWorld('subfuse', {
   fetchClashStatus: (options) => ipcRenderer.invoke('fetch-clash-status', options),
   windowControl: (action) => ipcRenderer.send('window-control', action),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
-  fetchRemoteManifest: () => ipcRenderer.invoke('fetch-remote-manifest'),
 
   // Process Adaptation & Guardian APIs
   getAdaptiveProcesses: (customRules) => ipcRenderer.invoke('get-adaptive-processes', customRules),
