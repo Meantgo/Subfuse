@@ -1111,6 +1111,8 @@ export async function generateConfig(
       "DOMAIN-KEYWORD,openai,AI防封稳定专线",
       "DOMAIN-SUFFIX,ai.google.dev,AI防封稳定专线",
       "DOMAIN-SUFFIX,gemini.google.com,AI防封稳定专线",
+      "DOMAIN-SUFFIX,cloudcode-pa.googleapis.com,AI防封稳定专线",
+      "DOMAIN-SUFFIX,daily-cloudcode-pa.googleapis.com,AI防封稳定专线",
       "PROCESS-NAME,Cursor,AI防封稳定专线",
       "PROCESS-NAME,cursor.exe,AI防封稳定专线",
     ];
