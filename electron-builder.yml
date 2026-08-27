@@ -14,6 +14,11 @@ files:
 mac:
   category: public.app-category.utilities
   icon: assets/icon.icns
+  extraResources:
+    - from: bin
+      to: bin
+      filter:
+        - mihomo
   target:
     - target: dmg
       arch:
