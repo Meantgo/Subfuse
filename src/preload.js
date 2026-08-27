@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('subfuse', {
   startProxy: (options) => ipcRenderer.invoke('start-proxy', options),
   stopProxy: () => ipcRenderer.invoke('stop-proxy'),
   getProxyStatus: () => ipcRenderer.invoke('get-proxy-status'),
+  getLiveConnections: () => ipcRenderer.invoke('get-live-connections'),
   getGuardianState: () => ipcRenderer.invoke('get-guardian-state'),
   setNotificationEnabled: (enabled) => ipcRenderer.invoke('set-notification-enabled', enabled),
   triggerProcessFailover: (options) => ipcRenderer.invoke('trigger-process-failover', options),

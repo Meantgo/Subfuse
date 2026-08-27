@@ -8,6 +8,7 @@ let currentMode = 'auto'; // 'auto' (自动规则) or 'global' (全局手动代�
 let isConnected = false;
 let userCustomProcesses = [];
 let allAdaptiveProcesses = [];
+let liveTimer = null;
 
 // ----------------- 本地持久化（同一次安装内记住用户输入） -----------------
 const SUB_STORAGE_KEY = 'subfuse-subscriptions-v1';
@@ -39,6 +40,50 @@ function showToast(msg) {
   toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2600);
+}
+
+// ----------------- 实时请求出口面板 -----------------
+
+async function refreshLiveView() {
+  if (!isConnected) return;
+  let data;
+  try {
+    data = await window.subfuse.getLiveConnections();
+  } catch {
+    return;
+  }
+  if (!data) return;
+  const exitEl = document.getElementById('live-exit');
+  if (exitEl) {
+    const g = data.groups || {};
+    exitEl.textContent =
+      `自动选择:${g['自动选择'] || '—'} ｜ API自动切换:${g['API自动切换'] || '—'} ｜ AI专线:${g['AI防封稳定专线'] || '—'}`;
+  }
+  const listEl = document.getElementById('live-list');
+  if (!listEl) return;
+  const conns = data.connections || [];
+  if (conns.length === 0) {
+    listEl.textContent = '暂无活跃连接';
+    return;
+  }
+  listEl.innerHTML = conns.slice(0, 60).map(c =>
+    `<div class="live-row"><span class="live-host">${escapeHtml(c.host)}</span>` +
+    `<span class="live-node">${escapeHtml(c.chain || '直连')}</span>` +
+    `<span class="live-proc">${escapeHtml(c.process)}</span></div>`
+  ).join('');
+}
+
+function startLiveView() {
+  stopLiveView();
+  refreshLiveView();
+  liveTimer = setInterval(refreshLiveView, 4000);
+}
+
+function stopLiveView() {
+  if (liveTimer) {
+    clearInterval(liveTimer);
+    liveTimer = null;
+  }
 }
 
 // ----------------- Subscription Items Management -----------------
@@ -418,6 +463,7 @@ async function handleToggleConnect() {
 
   if (isConnected) {
     await window.subfuse.stopProxy();
+    stopLiveView();
     isConnected = false;
     btn.classList.remove('connected');
     btnText.textContent = '启动代理';
@@ -447,6 +493,7 @@ async function handleToggleConnect() {
     }
 
     isConnected = true;
+    startLiveView();
     btn.classList.add('connected');
     btnText.textContent = '停止代理';
     dot.className = 'conn-dot online';

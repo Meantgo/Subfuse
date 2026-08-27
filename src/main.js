@@ -14,6 +14,8 @@ import os from 'node:os';
 import http from 'node:http';
 import child_process from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import * as yamlModule from 'js-yaml';
+const yamlLib = yamlModule.default || yamlModule;
 import {
   generateConfig,
   fetchSubscription,
@@ -105,6 +107,127 @@ const AI_GROUP_NAME = 'API自动切换';
 const MIHOMO_CTRL = 'http://127.0.0.1:9097';
 let cpaLogPos = 0;
 let lastAiSwitchAt = 0;
+let learnerIntervalId = null;
+let autoDirectDomains = new Set();
+const AUTO_DIRECT_FILE = path.join(app.getPath('userData'), 'auto-direct-domains.json');
+const ipCountryCache = new Map();
+
+function loadAutoDirect() {
+  try {
+    const arr = JSON.parse(fs.readFileSync(AUTO_DIRECT_FILE, 'utf-8'));
+    if (Array.isArray(arr)) autoDirectDomains = new Set(arr);
+  } catch {}
+}
+loadAutoDirect();
+
+async function fetchCtrl(ctrlPath) {
+  try {
+    const res = await fetch(`${MIHOMO_CTRL}${ctrlPath}`);
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function isCnIp(ip) {
+  if (ipCountryCache.has(ip)) return ipCountryCache.get(ip);
+  try {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,countryCode`);
+    const d = await res.json();
+    const cn = !!(d && d.status === 'success' && d.countryCode === 'CN');
+    ipCountryCache.set(ip, cn);
+    if (ipCountryCache.size > 300) ipCountryCache.clear();
+    return cn;
+  } catch {
+    return false;
+  }
+}
+
+// 把自动学习到的国内域名写进当前配置并热重载（无需重启代理进程）
+async function applyAutoDirectRules() {
+  if (autoDirectDomains.size === 0) return;
+  try {
+    const configPath = path.join(os.homedir(), 'Documents', 'SubFuse', 'merged.yaml');
+    if (!fs.existsSync(configPath)) return;
+    const doc = yamlLib.load(fs.readFileSync(configPath, 'utf-8'));
+    const rules = Array.isArray(doc.rules) ? doc.rules : [];
+    let changed = false;
+    for (const d of autoDirectDomains) {
+      const line = `DOMAIN-SUFFIX,${d},DIRECT`;
+      if (!rules.includes(line)) {
+        rules.unshift(line);
+        changed = true;
+      }
+    }
+    if (changed) {
+      doc.rules = rules;
+      fs.writeFileSync(configPath, yamlLib.dump(doc, { noRefs: true }), 'utf-8');
+      await fetch(`${MIHOMO_CTRL}/configs?force=true`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: configPath }),
+      });
+    }
+  } catch {}
+}
+
+async function autoDirectTick() {
+  if (!proxyActive) return;
+  const data = await fetchCtrl('/connections');
+  if (!data || !Array.isArray(data.connections)) return;
+  let newDomains = 0;
+  const seenHosts = new Set();
+  for (const c of data.connections) {
+    const m = c.metadata || {};
+    const host = (m.host || '').trim();
+    const destIP = m.destinationIP || '';
+    const chains = c.chains || [];
+    const proxied = chains.some(x => x !== 'DIRECT');
+    if (!proxied || !host || !destIP || /^\d/.test(host)) continue;
+    const parts = host.split('.');
+    if (parts.length < 2) continue;
+    const base = parts.slice(-2).join('.');
+    if (seenHosts.has(base) || autoDirectDomains.has(base)) continue;
+    seenHosts.add(base);
+    if (await isCnIp(destIP)) {
+      autoDirectDomains.add(base);
+      newDomains++;
+    }
+  }
+  if (newDomains > 0) {
+    try {
+      fs.writeFileSync(AUTO_DIRECT_FILE, JSON.stringify([...autoDirectDomains]), 'utf-8');
+    } catch {}
+    await applyAutoDirectRules();
+    sendDesktopNotification('国内直连自动学习', `已将 ${newDomains} 个国内域名加入直连`);
+    broadcastGuardianEvent('failover', { processName: '国内直连学习', newNode: `已自动加入 ${newDomains} 个直连域名` });
+  }
+}
+
+ipcMain.handle('get-live-connections', async () => {
+  const groups = await fetchCtrl('/proxies');
+  const conns = await fetchCtrl('/connections');
+  const out = { groups: {}, connections: [] };
+  if (groups && groups.proxies) {
+    for (const g of ['自动选择', 'API自动切换', 'AI防封稳定专线', '手动选择']) {
+      const p = groups.proxies[g];
+      if (p) out.groups[g] = p.now;
+    }
+  }
+  if (conns && Array.isArray(conns.connections)) {
+    out.connections = conns.connections.slice(0, 200).map(c => {
+      const m = c.metadata || {};
+      return {
+        host: m.host || m.destinationIP || '',
+        process: m.process || '',
+        destinationIP: m.destinationIP || '',
+        chain: (c.chains || []).filter(x => x !== 'DIRECT').slice(-2).join(' → '),
+        rule: c.rule || '',
+      };
+    });
+  }
+  return out;
+});
 
 function readCpaErrorsSinceLastCheck() {
   try {
@@ -454,6 +577,11 @@ ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
   if (!guardianIntervalId) {
     guardianIntervalId = setInterval(aiFailoverTick, 15000);
   }
+  // 启动国内直连自动学习（每 20 秒扫描连接，发现国内 IP 走代理则自动加直连并热重载）
+  await applyAutoDirectRules();
+  if (!learnerIntervalId) {
+    learnerIntervalId = setInterval(autoDirectTick, 20000);
+  }
 
   const modeLabel = mode === 'global' ? '全局手动代理' : '全机自适应规则分流';
   sendDesktopNotification("SubFuse 代理已启动", `已成功接入${modeLabel}，端口 7890 已接管网络`);
@@ -472,6 +600,10 @@ ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
 });
 
 ipcMain.handle('stop-proxy', async () => {
+  if (learnerIntervalId) {
+    clearInterval(learnerIntervalId);
+    learnerIntervalId = null;
+  }
   if (guardianIntervalId) {
     clearInterval(guardianIntervalId);
     guardianIntervalId = null;
