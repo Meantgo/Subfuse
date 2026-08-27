@@ -442,6 +442,9 @@ async function handleToggleConnect() {
     } else if (conflictNote) {
       conflictNote.classList.remove('warn');
     }
+    if (res && res.repairedNodes && res.repairedNodes.length > 0) {
+      showToast(`已自动剔除 ${res.repairedNodes.length} 个无法使用的节点，代理已正常启动`);
+    }
 
     isConnected = true;
     btn.classList.add('connected');

@@ -25,6 +25,7 @@ import {
   classifyProcess,
   getAdaptiveProcesses,
 } from '../core/engine.js';
+import { validateAndRepairConfig } from '../core/config_guard.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -324,6 +325,19 @@ ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
     }
   } catch {}
 
+  // 启动前自动校验配置，剔除 mihomo 无法解析的节点（如非法 REALITY short-id）
+  const guard = validateAndRepairConfig(configPath, binary, rundir);
+  if (!guard.ok) {
+    return {
+      success: false,
+      active: false,
+      warning: conflictClients
+        ? `检测到其他代理客户端正在运行：${conflictClients}。请退出它们，只保留 SubFuse。`
+        : null,
+      error: guard.error || '配置校验失败',
+    };
+  }
+
   if (proxyProcess) {
     try {
       proxyProcess.kill();
@@ -358,6 +372,7 @@ ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
   return {
     success: true,
     active: true,
+    repairedNodes: guard.removed,
     warning: conflictClients
       ? `检测到其他代理客户端正在运行：${conflictClients}。请退出它们，只保留 SubFuse，否则可能出现端口冲突。`
       : null,
