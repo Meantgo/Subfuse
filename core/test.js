@@ -449,3 +449,27 @@ test("TestGenerateConfig - API traffic uses auto-switch group, web AI uses fixed
   // 存在 API自动切换 组
   assert.ok(config["proxy-groups"].some(g => g.name === "API自动切换"));
 });
+
+test("TestGenerateConfig - domestic app domains always direct (kugou etc.)", async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ps-cn-"));
+  const p = path.join(tmp, "sub.txt");
+  fs.writeFileSync(p, "trojan://pw@ok.example.com:443#OK");
+
+  const { config } = await generateConfig(
+    [{ name: "机场", url: "file://" + p }],
+    { routingMode: "auto", autoProcessRules: false }
+  );
+  const rules = config.rules;
+  // 酷狗及其 CDN 必须永远直连
+  assert.ok(rules.includes("DOMAIN-SUFFIX,kugou.com,DIRECT"));
+  assert.ok(rules.includes("DOMAIN-SUFFIX,kgimg.com,DIRECT"));
+  assert.ok(rules.includes("DOMAIN-SUFFIX,wswebcdn.com,DIRECT"));
+  // 直连规则必须在 MATCH 之前，否则不会命中
+  const idxKugou = rules.indexOf("DOMAIN-SUFFIX,kugou.com,DIRECT");
+  const idxMatch = rules.indexOf("MATCH,手动选择");
+  assert.ok(idxKugou !== -1 && idxKugou < idxMatch);
+  // 常用国内 App 抽查
+  assert.ok(rules.includes("DOMAIN-SUFFIX,qq.com,DIRECT"));
+  assert.ok(rules.includes("DOMAIN-SUFFIX,taobao.com,DIRECT"));
+  assert.ok(rules.includes("DOMAIN-SUFFIX,bilibili.com,DIRECT"));
+});

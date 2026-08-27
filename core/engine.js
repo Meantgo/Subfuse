@@ -77,6 +77,30 @@ function isRealNode(n) {
   return !PLACEHOLDER_NODE_PATTERN.test(nm);
 }
 
+// 国内常用应用域名直连清单：无论合并时这些 App 是否在运行，都永远直连，
+// 避免它们的 CDN/边缘节点被解析成非大陆 IP 后误走代理导致卡顿。
+const DOMESTIC_DOMAIN_SUFFIXES = [
+  // 腾讯系
+  "qq.com", "qpic.cn", "gtimg.cn", "myqcloud.com", "qcloud.com",
+  // 阿里系
+  "taobao.com", "tmall.com", "alipay.com", "alicdn.com",
+  // 百度
+  "baidu.com", "bdstatic.com", "baidupcs.com",
+  // 哔哩哔哩 / 字节
+  "bilibili.com", "hdslb.com", "douyin.com", "douyinstatic.com", "bytedance.net",
+  // 网易
+  "163.com", "netease.com",
+  // 视频
+  "youku.com", "iqiyi.com", "iqiyipic.com",
+  // 音乐
+  "kugou.com", "kugou.com.cn", "kgimg.com", "wswebcdn.com", "kuwo.cn", "music.163.com",
+  // 其他常用
+  "ximalaya.com", "wps.cn", "kingsoft.com", "dingtalk.com",
+  "meituan.com", "meituan.net", "jd.com", "360buyimg.com",
+  "weibo.com", "sina.com.cn", "sinaimg.cn", "zhihu.com",
+  "xiaohongshu.com", "12306.cn", "sm.cn", "unionpay.com", "95516.com",
+];
+
 /**
  * 根据进程名自动判断策略：DIRECT（直连规避）/ 自动选择（走代理） / null（未知）
  */
@@ -1119,6 +1143,14 @@ export async function generateConfig(
             covered.add(`${lower}.exe`);
           }
         }
+      }
+    }
+
+    // 1.1 内置国内应用域名 → 永远直连（不依赖合并时快照，CDN 边缘 IP 也能兜住）
+    for (const d of DOMESTIC_DOMAIN_SUFFIXES) {
+      const line = `DOMAIN-SUFFIX,${d},DIRECT`;
+      if (!processRuleLines.includes(line)) {
+        processRuleLines.push(line);
       }
     }
 
