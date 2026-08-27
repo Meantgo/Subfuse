@@ -1272,6 +1272,9 @@ export function writeConfigYaml(config) {
     "socks-port": 7891,
     "mixed-port": 7890,
     "allow-lan": false,
+    // 关闭 IPv6：避免 IPv4/IPv6 走不同节点导致出口地区不一致，
+    // 被 Google 等站点判定为「异常流量」并封禁。
+    ipv6: false,
     mode: config.mode || "rule",
     "log-level": "info",
     "external-controller": "127.0.0.1:9097",
