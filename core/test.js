@@ -400,3 +400,23 @@ test("TestGenerateConfig - successful fetch updates the node cache", async () =>
   assert.ok(cache[liveUrl], "抓取成功后应写入缓存");
   assert.ok(Array.isArray(cache[liveUrl].nodes) && cache[liveUrl].nodes.length === 1);
 });
+
+test("TestGenerateConfig - placeholder fake nodes are filtered out", async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ps-fake-"));
+  const p = path.join(tmp, "sub.txt");
+  fs.writeFileSync(p, [
+    "trojan://pw@real1.example.com:443#剩余流量：35 GB",
+    "trojan://pw@real2.example.com:443#套餐到期：2027-07-19",
+    "trojan://pw@real3.example.com:443#官网:https://www.xydizhi.com",
+    "trojan://pw@real4.example.com:443#真实节点A",
+  ].join("\n"));
+
+  const { config, warnings } = await generateConfig(
+    [{ name: "机场", url: "file://" + p }],
+    { routingMode: "auto", autoProcessRules: false }
+  );
+  const names = config.proxies.map(x => x.name);
+  assert.ok(names.some(n => n.includes("真实节点A")), "真实节点应保留");
+  assert.ok(names.every(n => !/剩余流量|套餐到期|官网:/.test(n)), "占位假节点应被过滤");
+  assert.ok(config.proxies.length === 1);
+});

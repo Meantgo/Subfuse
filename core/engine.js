@@ -69,6 +69,14 @@ export const PROXY_PROCESS_KEYWORDS = new Set([
   "ghostty", "raycast", "alfred", "utm", "parallels", "vmware"
 ]);
 
+// 部分机场会注入「剩余流量/套餐到期/官网」等占位假节点，它们不是真实代理，必须过滤
+const PLACEHOLDER_NODE_PATTERN = /剩余流量|套餐到期|距离下次重置|^官网:|^星云:|cdn\.xxxlsop3\.com/i;
+
+function isRealNode(n) {
+  const nm = String((n && (n.name || n.server)) || '');
+  return !PLACEHOLDER_NODE_PATTERN.test(nm);
+}
+
 /**
  * 根据进程名自动判断策略：DIRECT（直连规避）/ 自动选择（走代理） / null（未知）
  */
@@ -939,6 +947,15 @@ export async function generateConfig(
             : (fetchErr.message || String(fetchErr)))
         : "没有解析出任何节点（可能链接失效或格式不支持）";
       const msg = `[${name}] 抓取受阻：${errMsg}`;
+      warnings.push(msg);
+      if (onProgress) onProgress({ type: 'error', message: msg });
+      continue;
+    }
+
+    // 过滤占位假节点，保证自动选择 / AI 专线只从真实节点里挑
+    nodes = nodes.filter(isRealNode);
+    if (nodes.length === 0) {
+      const msg = `[${name}] 过滤占位节点后无真实节点可用（可能订阅被服务商注入假节点）`;
       warnings.push(msg);
       if (onProgress) onProgress({ type: 'error', message: msg });
       continue;

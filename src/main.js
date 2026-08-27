@@ -98,6 +98,77 @@ app.on('before-quit', () => {
 let notificationsEnabled = true;
 let activeMergedProxies = [];
 let guardianIntervalId = null;
+// AI 专线看门狗：检测 Google 拒绝当前出口（400 地区不支持 / EOF）后自动切换节点
+const CPA_LOG_PATH = path.join(os.homedir(), '.cli-proxy-api', 'logs', 'main.log');
+const AI_GROUP_NAME = 'AI防封稳定专线';
+const MIHOMO_CTRL = 'http://127.0.0.1:9097';
+let cpaLogPos = 0;
+let lastAiSwitchAt = 0;
+
+function readCpaErrorsSinceLastCheck() {
+  try {
+    const st = fs.statSync(CPA_LOG_PATH);
+    if (!st.isFile()) return false;
+    if (st.size < cpaLogPos) cpaLogPos = 0; // 日志轮转
+    if (st.size === cpaLogPos) return false;
+    const fd = fs.openSync(CPA_LOG_PATH, 'r');
+    const buf = Buffer.alloc(st.size - cpaLogPos);
+    fs.readSync(fd, buf, 0, buf.length, cpaLogPos);
+    fs.closeSync(fd);
+    cpaLogPos = st.size;
+    const text = buf.toString('utf-8');
+    // 只在出现「地区不支持」或上游 EOF 时触发节点切换（配额类错误切节点无意义，不触发）
+    return /User location is not supported/i.test(text) || /"https:\/\/[a-z0-9.-]*cloudcode-pa[^"]*": EOF/.test(text);
+  } catch {
+    return false;
+  }
+}
+
+async function switchAiNode() {
+  try {
+    const listRes = await fetch(`${MIHOMO_CTRL}/proxies/${encodeURIComponent(AI_GROUP_NAME)}`);
+    if (!listRes.ok) return null;
+    const group = await listRes.json();
+    const all = Array.isArray(group.all) ? group.all : [];
+    const now = group.now;
+    const idx = all.indexOf(now);
+    let next = null;
+    for (let i = 1; i <= all.length; i++) {
+      const cand = all[(idx + i) % all.length];
+      if (cand && cand !== 'DIRECT' && cand !== '自动选择' && cand !== '手动选择') {
+        next = cand;
+        break;
+      }
+    }
+    if (!next) return null;
+    const putRes = await fetch(`${MIHOMO_CTRL}/proxies/${encodeURIComponent(AI_GROUP_NAME)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: next }),
+    });
+    return putRes.ok ? next : null;
+  } catch {
+    return null;
+  }
+}
+
+async function aiFailoverTick() {
+  if (!proxyActive) return;
+  const nowMs = Date.now();
+  if (nowMs - lastAiSwitchAt < 40000) return; // 防抖：40 秒内最多切换一次
+  if (!readCpaErrorsSinceLastCheck()) return;
+
+  lastAiSwitchAt = nowMs;
+  const next = await switchAiNode();
+  // 切换节点后重启 CPA，强制重建到 Google 的连接（旧 keep-alive 仍走旧节点）
+  child_process.exec('brew services restart cliproxyapi', { timeout: 20000 }, () => {});
+
+  const msg = next
+    ? `Gemini 出口异常，已自动切换到节点：${next}`
+    : 'Gemini 出口异常，尝试自动切换节点失败（请检查代理状态）';
+  sendDesktopNotification('AI 专线自动切换', msg);
+  broadcastGuardianEvent('failover', { processName: 'Gemini API', newNode: next || '切换失败' });
+}
 
 function sendDesktopNotification(title, body) {
   if (!notificationsEnabled) return;
@@ -375,6 +446,14 @@ ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
   proxyActive = true;
   activeProxyMode = mode;
 
+  // 启动 AI 专线看门狗：CPA 出现 Google 地区拒绝/EOF 时自动切换节点
+  try {
+    cpaLogPos = fs.existsSync(CPA_LOG_PATH) ? fs.statSync(CPA_LOG_PATH).size : 0;
+  } catch {}
+  if (!guardianIntervalId) {
+    guardianIntervalId = setInterval(aiFailoverTick, 15000);
+  }
+
   const modeLabel = mode === 'global' ? '全局手动代理' : '全机自适应规则分流';
   sendDesktopNotification("SubFuse 代理已启动", `已成功接入${modeLabel}，端口 7890 已接管网络`);
 
@@ -392,6 +471,10 @@ ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
 });
 
 ipcMain.handle('stop-proxy', async () => {
+  if (guardianIntervalId) {
+    clearInterval(guardianIntervalId);
+    guardianIntervalId = null;
+  }
   if (proxyProcess) {
     try {
       proxyProcess.kill();
