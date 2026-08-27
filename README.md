@@ -7,9 +7,23 @@ Next-Gen Multi-Airport Subscription Aggregator & Intelligent Process-Adaptive Pr
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Meantgo/Subfuse?color=brightgreen)](https://github.com/Meantgo/Subfuse/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-gray.svg)](#预编译安装包下载)
-[![Test](https://img.shields.io/badge/tests-24%2F24%20passing-brightgreen.svg)](#本地构建与开发)
+[![Test](https://img.shields.io/badge/tests-29%2F29%20passing-brightgreen.svg)](#本地构建与开发)
 
-</div>
+---
+
+## 更新公告（v1.0.0 · 2026-08-27）
+
+> 近期新增与修复，开箱即用：
+
+- **多订阅自动合并 + 跨机场秒级容灾**：多个机场链接合并成一份配置，某个机场全挂自动切换到另一机场。
+- **订阅节点本地缓存**：动态 token 链接失效时自动使用上次缓存节点兜底；重启 App 无需重新合并，直接「启动代理」即可。
+- **启动前自动校验配置**：自动剔除 mihomo 无法解析的坏节点（如非法的 REALITY 配置），不再因一个坏节点导致整体启动失败。
+- **AI 流量智能分流**：
+  - 网页版 AI（ChatGPT / Claude / Gemini 网页 / Cursor）→ 锁定固定节点，防止频繁换 IP 触发封号；
+  - API 流量（Codex / Cloud Code / CPA 等）→ 自动切换节点，出现 Google 地区拒绝或连接中断时**看门狗自动切换节点并重建连接**。
+- **国内 App 自动直连**：内置国内常用应用域名直连清单，并支持**实时自动学习**——检测到国内 IP 误走代理时自动加入直连并热更新，酷狗、微信、网易云等不会再卡。
+- **实时请求出口面板**：启动代理后可实时查看每个请求（域名 → 出口节点 → 进程）以及各策略组的当前节点。
+- **双平台自包含**：macOS / Windows 安装包内置 mihomo 内核，不依赖任何外部代理客户端；请只运行 SubFuse 一个代理软件。
 
 ---
 
