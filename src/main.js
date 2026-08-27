@@ -186,6 +186,25 @@ function setSystemProxy(enable, port = 7890) {
   }
 }
 
+// 检测是否有其他代理客户端在运行（ClashX / Clash Verge / 星云等），
+// 提醒用户只运行 SubFuse 一个代理软件，避免端口冲突。
+function detectOtherProxyClients() {
+  try {
+    const out = child_process.execSync(
+      "pgrep -fl 'ClashX|Clash Verge|com.vortex.helper|verge-mihomo' | grep -v pgrep || true",
+      { encoding: 'utf-8', timeout: 3000 }
+    ).trim();
+    if (!out) return null;
+    const names = [...new Set(out.split('\n').map(l => {
+      const parts = l.trim().split(/\s+/);
+      return parts.length >= 2 ? parts[1].split('/').pop() : l;
+    }))];
+    return names.length ? names.join('、') : null;
+  } catch {
+    return null;
+  }
+}
+
 // ----------------- IPC Handlers -----------------
 
 ipcMain.handle('get-default-output-path', () => {
@@ -285,6 +304,7 @@ ipcMain.handle('get-adaptive-processes', async (_event, customRules) => {
 
 ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
   const binary = findMihomoBinary();
+  const conflictClients = detectOtherProxyClients();
   const rundir = path.join(os.tmpdir(), 'subfuse-run');
   try {
     fs.mkdirSync(rundir, { recursive: true });
@@ -338,6 +358,9 @@ ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
   return {
     success: true,
     active: true,
+    warning: conflictClients
+      ? `检测到其他代理客户端正在运行：${conflictClients}。请退出它们，只保留 SubFuse，否则可能出现端口冲突。`
+      : null,
     port: 7890,
     hasCore: Boolean(binary),
     mode,

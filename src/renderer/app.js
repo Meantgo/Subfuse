@@ -435,6 +435,14 @@ async function handleToggleConnect() {
       mode: currentMode,
     });
 
+    const conflictNote = document.getElementById('single-client-note');
+    if (res && res.warning) {
+      if (conflictNote) conflictNote.classList.add('warn');
+      showToast(res.warning);
+    } else if (conflictNote) {
+      conflictNote.classList.remove('warn');
+    }
+
     isConnected = true;
     btn.classList.add('connected');
     btnText.textContent = '停止代理';
