@@ -100,7 +100,8 @@ let activeMergedProxies = [];
 let guardianIntervalId = null;
 // AI 专线看门狗：检测 Google 拒绝当前出口（400 地区不支持 / EOF）后自动切换节点
 const CPA_LOG_PATH = path.join(os.homedir(), '.cli-proxy-api', 'logs', 'main.log');
-const AI_GROUP_NAME = 'AI防封稳定专线';
+// API 流量走「API自动切换」组，由看门狗在 Google 拒绝出口时自动切换节点
+const AI_GROUP_NAME = 'API自动切换';
 const MIHOMO_CTRL = 'http://127.0.0.1:9097';
 let cpaLogPos = 0;
 let lastAiSwitchAt = 0;
@@ -164,9 +165,9 @@ async function aiFailoverTick() {
   child_process.exec('brew services restart cliproxyapi', { timeout: 20000 }, () => {});
 
   const msg = next
-    ? `Gemini 出口异常，已自动切换到节点：${next}`
-    : 'Gemini 出口异常，尝试自动切换节点失败（请检查代理状态）';
-  sendDesktopNotification('AI 专线自动切换', msg);
+    ? `Gemini/API 出口异常，已自动切换到节点：${next}`
+    : 'Gemini/API 出口异常，尝试自动切换节点失败（请检查代理状态）';
+  sendDesktopNotification('API 节点自动切换', msg);
   broadcastGuardianEvent('failover', { processName: 'Gemini API', newNode: next || '切换失败' });
 }
 

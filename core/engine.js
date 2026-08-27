@@ -1063,16 +1063,25 @@ export async function generateConfig(
       proxies: ["自动选择", ...allNodeNames.slice(0, 60), "DIRECT"],
     };
 
+    // API 流量专用组：Codex / Cloud Code / CPA 等走 API，不会因换 IP 封号，
+    // 交给看门狗（检测到 Google 拒绝出口时自动切换节点）自动兜底，不固定节点。
+    const apiGroup = {
+      name: "API自动切换",
+      type: "select",
+      proxies: ["自动选择", ...allNodeNames.slice(0, 60), "DIRECT"],
+    };
+
     const manualGroup = {
       name: "手动选择",
       type: "select",
-      proxies: ["自动选择", "AI防封稳定专线", "常用应用与浏览器", "DIRECT", ...perSubGroups.map(g => g.name)],
+      proxies: ["自动选择", "API自动切换", "AI防封稳定专线", "常用应用与浏览器", "DIRECT", ...perSubGroups.map(g => g.name)],
     };
 
     proxyGroups = [
       ...perSubGroups,
       manualGroup,
       autoGroup,
+      apiGroup,
       aiGroup,
       browserGroup,
     ];
@@ -1113,7 +1122,24 @@ export async function generateConfig(
       }
     }
 
-    // 2. 内置重点 AI 域名与进程 (防封锁定)
+    // 1.5 API 流量优先走「API自动切换」（必须排在 AI 防封的关键字规则之前，
+    //     否则 api.openai.com 会被 DOMAIN-KEYWORD,openai 抢走）
+    const builtInApiRules = [
+      "DOMAIN-SUFFIX,api.openai.com,API自动切换",
+      "DOMAIN-SUFFIX,api.anthropic.com,API自动切换",
+      "DOMAIN-SUFFIX,api.claude.ai,API自动切换",
+      "DOMAIN-SUFFIX,api.gemini.google.com,API自动切换",
+      "DOMAIN-SUFFIX,cloudcode-pa.googleapis.com,API自动切换",
+      "DOMAIN-SUFFIX,daily-cloudcode-pa.googleapis.com,API自动切换",
+      "DOMAIN-SUFFIX,generativelanguage.googleapis.com,API自动切换",
+    ];
+    for (const r of builtInApiRules) {
+      if (!processRuleLines.includes(r)) {
+        processRuleLines.push(r);
+      }
+    }
+
+    // 2. 内置重点 AI 域名与进程 (防封锁定，仅限网页版 AI 站点)
     const builtInAiRules = [
       "DOMAIN-SUFFIX,anthropic.com,AI防封稳定专线",
       "DOMAIN-SUFFIX,claude.ai,AI防封稳定专线",
@@ -1128,8 +1154,6 @@ export async function generateConfig(
       "DOMAIN-KEYWORD,openai,AI防封稳定专线",
       "DOMAIN-SUFFIX,ai.google.dev,AI防封稳定专线",
       "DOMAIN-SUFFIX,gemini.google.com,AI防封稳定专线",
-      "DOMAIN-SUFFIX,cloudcode-pa.googleapis.com,AI防封稳定专线",
-      "DOMAIN-SUFFIX,daily-cloudcode-pa.googleapis.com,AI防封稳定专线",
       "PROCESS-NAME,Cursor,AI防封稳定专线",
       "PROCESS-NAME,cursor.exe,AI防封稳定专线",
     ];

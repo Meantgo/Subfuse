@@ -420,3 +420,32 @@ test("TestGenerateConfig - placeholder fake nodes are filtered out", async () =>
   assert.ok(names.every(n => !/剩余流量|套餐到期|官网:/.test(n)), "占位假节点应被过滤");
   assert.ok(config.proxies.length === 1);
 });
+
+test("TestGenerateConfig - API traffic uses auto-switch group, web AI uses fixed node", async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ps-apiai-"));
+  const p = path.join(tmp, "sub.txt");
+  fs.writeFileSync(p, "trojan://pw@ok.example.com:443#OK");
+
+  const { config } = await generateConfig(
+    [{ name: "机场", url: "file://" + p }],
+    { routingMode: "auto", autoProcessRules: false }
+  );
+
+  const rules = config.rules;
+  // API 端点 → API自动切换
+  assert.ok(rules.includes("DOMAIN-SUFFIX,cloudcode-pa.googleapis.com,API自动切换"));
+  assert.ok(rules.includes("DOMAIN-SUFFIX,api.openai.com,API自动切换"));
+  assert.ok(rules.includes("DOMAIN-SUFFIX,daily-cloudcode-pa.googleapis.com,API自动切换"));
+  // 网页版 AI → AI防封稳定专线
+  assert.ok(rules.includes("DOMAIN-SUFFIX,chatgpt.com,AI防封稳定专线"));
+  assert.ok(rules.includes("DOMAIN-SUFFIX,anthropic.com,AI防封稳定专线"));
+  assert.ok(rules.includes("DOMAIN-SUFFIX,gemini.google.com,AI防封稳定专线"));
+  // API 规则必须在 AI 关键字规则之前（否则 api.openai.com 会被 DOMAIN-KEYWORD,openai 抢走）
+  const idxApi = rules.indexOf("DOMAIN-SUFFIX,api.openai.com,API自动切换");
+  const idxKw = rules.indexOf("DOMAIN-KEYWORD,openai,AI防封稳定专线");
+  assert.ok(idxApi !== -1 && idxKw !== -1 && idxApi < idxKw);
+  // cloudcode-pa 不应再进 AI 专线
+  assert.ok(!rules.includes("DOMAIN-SUFFIX,cloudcode-pa.googleapis.com,AI防封稳定专线"));
+  // 存在 API自动切换 组
+  assert.ok(config["proxy-groups"].some(g => g.name === "API自动切换"));
+});
