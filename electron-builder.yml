@@ -43,6 +43,11 @@ dmg:
 
 win:
   icon: assets/icon.ico
+  extraResources:
+    - from: bin
+      to: bin
+      filter:
+        - mihomo.exe
   target:
     - target: zip
       arch:
