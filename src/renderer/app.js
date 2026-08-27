@@ -9,6 +9,30 @@ let isConnected = false;
 let userCustomProcesses = [];
 let allAdaptiveProcesses = [];
 
+// ----------------- 本地持久化（同一次安装内记住用户输入） -----------------
+const SUB_STORAGE_KEY = 'subfuse-subscriptions-v1';
+const MODE_STORAGE_KEY = 'subfuse-mode-v1';
+
+function saveSubscriptions() {
+  try {
+    const list = subItems
+      .map(i => ({ name: i.name, url: i.input.value.trim() }))
+      .filter(i => i.url);
+    localStorage.setItem(SUB_STORAGE_KEY, JSON.stringify(list));
+  } catch {}
+}
+
+function loadSubscriptions() {
+  try {
+    const raw = localStorage.getItem(SUB_STORAGE_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list.filter(i => i && i.url) : [];
+  } catch {
+    return [];
+  }
+}
+
 function showToast(msg) {
   const toast = document.getElementById('toast');
   if (!toast) return;
@@ -43,6 +67,9 @@ function addSubItem(name = '', url = '') {
   const status = div.querySelector('.sub-status');
   const btnRemove = div.querySelector('.btn-remove');
 
+  // 编辑即保存，保证重启后订阅链接还在
+  input.addEventListener('input', saveSubscriptions);
+
   // Smart multi-URL split on paste (handles Chinese commas ，，, English commas, brackets, spaces)
   input.addEventListener('paste', () => {
     setTimeout(() => {
@@ -66,10 +93,12 @@ function addSubItem(name = '', url = '') {
     div.remove();
     subItems = subItems.filter(i => i.id !== id);
     reindexItems();
+    saveSubscriptions();
   });
 
   const itemObj = { id, element: div, input, status, name: defaultName };
   subItems.push(itemObj);
+  saveSubscriptions();
   return itemObj;
 }
 
@@ -146,6 +175,7 @@ function updateNodeDropdowns(proxies) {
 
 function switchMode(mode) {
   currentMode = mode;
+  try { localStorage.setItem(MODE_STORAGE_KEY, mode); } catch {}
   const tabAuto = document.getElementById('tab-auto');
   const tabGlobal = document.getElementById('tab-global');
   const panelAuto = document.getElementById('panel-auto-rules');
@@ -497,8 +527,19 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   currentOutputPath = await window.subfuse.getDefaultOutputPath();
 
-  addSubItem('机场 1', '');
-  addSubItem('机场 2', '');
+  // 恢复上一次的订阅链接，避免每次打开都要重新粘贴
+  const savedSubs = loadSubscriptions();
+  if (savedSubs.length > 0) {
+    savedSubs.forEach(s => addSubItem(s.name || '机场', s.url));
+  } else {
+    addSubItem('机场 1', '');
+    addSubItem('机场 2', '');
+  }
+
+  const savedMode = localStorage.getItem(MODE_STORAGE_KEY);
+  if (savedMode === 'auto' || savedMode === 'global') {
+    switchMode(savedMode);
+  }
 
   document.getElementById('tab-auto').addEventListener('click', () => switchMode('auto'));
   document.getElementById('tab-global').addEventListener('click', () => switchMode('global'));
