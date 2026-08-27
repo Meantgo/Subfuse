@@ -1,8 +1,3 @@
-<img width="884" height="794" alt="截屏2026-08-27 15 18 05" src="https://github.com/user-attachments/assets/20745b68-e3fc-41c1-a4a3-5173ac63b214" />
-<div align="center">
-
-<img src="assets/icon-128.png" width="96" height="96" alt="SubFuse Logo" />
-
 # SubFuse
 
 **多机场订阅聚合与全机进程自适应路由客户端**
@@ -41,6 +36,10 @@ SubFuse 是一款面向多机场订阅管理与本地进程级路由的桌面代
 3. **启动代理**：点击 **「启动代理」** 接入系统网络接管（默认本地端口 7890）。
 
 ---
+<img width="884" height="794" alt="截屏2026-08-27 15 18 05" src="https://github.com/user-attachments/assets/20745b68-e3fc-41c1-a4a3-5173ac63b214" />
+<div align="center">
+
+<img src="assets/icon-128.png" width="96" height="96" alt="SubFuse Logo" />
 
 ## 预编译安装包下载
 
