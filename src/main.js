@@ -262,6 +262,7 @@ ipcMain.handle('generate-config', async (event, options) => {
       aiPreferredNode: aiPreferredNode || null,
       customProcesses: customProcesses || [],
       autoProcessRules: autoProcessRules !== false,
+      cacheFile: path.join(app.getPath('userData'), 'subscription-cache.json'),
       onProgress,
     });
 
@@ -291,6 +292,14 @@ ipcMain.handle('write-config-file', async (_event, { filePath, content }) => {
     return { success: true, filePath };
   } catch (err) {
     return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('config-file-exists', (_event, filePath) => {
+  try {
+    return typeof filePath === 'string' && fs.existsSync(filePath);
+  } catch {
+    return false;
   }
 });
 

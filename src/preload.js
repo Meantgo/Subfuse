@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('subfuse', {
   openFileLocation: (filePath) => ipcRenderer.invoke('open-file-location', filePath),
   openDirectory: (dirPath) => ipcRenderer.invoke('open-directory', dirPath),
   getDefaultOutputPath: () => ipcRenderer.invoke('get-default-output-path'),
+  configFileExists: (filePath) => ipcRenderer.invoke('config-file-exists', filePath),
   selectOutputFile: (defaultPath) => ipcRenderer.invoke('select-output-file', defaultPath),
   testSingleSubscription: (options) => ipcRenderer.invoke('test-single-subscription', options),
   parseSingleNodeUri: (uri) => ipcRenderer.invoke('parse-single-node-uri', uri),

@@ -358,3 +358,45 @@ test("TestGenerateConfig - auto_process_rules_injection", async () => {
   assert.ok(procRules.some(r => r.includes("Google Chrome") || r.includes("Claude") || r.includes("launchd") || r.includes("wechat")));
   assert.ok(cfg.rules.includes("MATCH,手动选择"));
 });
+
+test("TestGenerateConfig - expired dynamic token falls back to local node cache", async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ps-cache-"));
+  const cacheFile = path.join(tmp, "sub-cache.json");
+  const deadUrl = "https://expired.example.com/sub?token=dead1";
+
+  // 预置缓存：该链接上次抓到过 2 个节点
+  fs.writeFileSync(cacheFile, JSON.stringify({
+    [deadUrl]: {
+      cachedAt: Date.now(),
+      nodes: [
+        { name: "缓存节点1", type: "trojan", server: "c1.example.com", port: 443, password: "pw" },
+        { name: "缓存节点2", type: "ss", server: "c2.example.com", port: 8388, cipher: "aes-256-gcm", password: "pw" },
+      ],
+    },
+  }));
+
+  const { config, warnings } = await generateConfig(
+    [{ name: "动态机场", url: deadUrl }],
+    { routingMode: "auto", autoProcessRules: false, cacheFile }
+  );
+
+  assert.ok(config.proxies.length >= 2, "失效链接应使用本地缓存的节点");
+  assert.ok(warnings.some(w => w.includes("已使用本地缓存")), "应有缓存兜底提示");
+});
+
+test("TestGenerateConfig - successful fetch updates the node cache", async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ps-cache2-"));
+  const cacheFile = path.join(tmp, "sub-cache.json");
+  const livePath = path.join(tmp, "live.txt");
+  fs.writeFileSync(livePath, "trojan://pw@ok.example.com:443#OK");
+  const liveUrl = "file://" + livePath;
+
+  await generateConfig(
+    [{ name: "机场", url: liveUrl }],
+    { routingMode: "auto", autoProcessRules: false, cacheFile }
+  );
+
+  const cache = JSON.parse(fs.readFileSync(cacheFile, 'utf-8'));
+  assert.ok(cache[liveUrl], "抓取成功后应写入缓存");
+  assert.ok(Array.isArray(cache[liveUrl].nodes) && cache[liveUrl].nodes.length === 1);
+});

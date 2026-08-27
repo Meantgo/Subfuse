@@ -858,11 +858,21 @@ export async function generateConfig(
     customProcesses = [],              // 自定义进程路由 [{ name: 'Claude.exe', target: 'fixed' }]
     autoProcessRules = true,           // 是否自动扫描全机真实进程并自适应生成规则
     defaultProcessPolicy = null,       // 未分类进程默认策略
+    cacheFile = null,                  // 订阅节点缓存文件路径（本地持久化，失效时兜底）
   } = {}
 ) {
   const allProxies = [];
   const perSubGroups = [];
   const warnings = [];
+
+  // 加载订阅节点缓存：即使动态 token 链接失效，也能用上次抓到的节点继续工作
+  let nodeCache = {};
+  if (cacheFile) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(cacheFile, 'utf-8'));
+      if (parsed && typeof parsed === 'object') nodeCache = parsed;
+    } catch {}
+  }
 
   // 智能展开：支持单行粘贴多个由逗号、分号或空格分隔的订阅链接
   const expandedSubscriptions = [];
@@ -895,23 +905,40 @@ export async function generateConfig(
 
     if (onProgress) onProgress({ type: 'fetching', name, url: rawUrl });
 
-    let text;
+    let rawNodes = null;
+    let fetchErr = null;
     try {
-      text = await fetchSubscription(rawUrl, fetchProxy);
-    } catch (e) {
-      let errMsg = e.message || String(e);
-      if (errMsg.includes("403")) {
-        errMsg = "HTTP 403 Forbidden（机场服务端拒绝访问，可能Token已过期或服务商维护）";
+      const text = await fetchSubscription(rawUrl, fetchProxy);
+      rawNodes = parseSubscriptionContent(text);
+      if (rawNodes && rawNodes.length > 0 && cacheFile) {
+        // 抓取成功：更新本地缓存（存原始节点，不掺入机场前缀名）
+        nodeCache[rawUrl] = { cachedAt: Date.now(), nodes: rawNodes };
       }
-      const msg = `[${name}] 抓取受阻：${errMsg}`;
-      warnings.push(msg);
-      if (onProgress) onProgress({ type: 'error', message: msg });
-      continue;
+    } catch (e) {
+      fetchErr = e;
     }
 
-    const nodes = parseSubscriptionContent(text);
+    let nodes = rawNodes && rawNodes.length > 0 ? rawNodes : null;
+    if (!nodes && cacheFile) {
+      const cached = nodeCache[rawUrl];
+      if (cached && Array.isArray(cached.nodes) && cached.nodes.length > 0) {
+        nodes = cached.nodes;
+        const reason = fetchErr
+          ? (fetchErr.message && fetchErr.message.includes("403") ? "HTTP 403（Token 可能已过期）" : "抓取失败")
+          : "本次未解析到节点";
+        const msg = `[${name}] ${reason}，已使用本地缓存 ${nodes.length} 个节点（建议到机场后台更新订阅链接）`;
+        warnings.push(msg);
+        if (onProgress) onProgress({ type: 'warning', message: msg });
+      }
+    }
+
     if (!nodes || nodes.length === 0) {
-      const msg = `[${name}] 没有解析出任何节点（可能链接失效或格式不支持）`;
+      const errMsg = fetchErr
+        ? (fetchErr.message && fetchErr.message.includes("403")
+            ? "HTTP 403 Forbidden（机场服务端拒绝访问，可能Token已过期或服务商维护）"
+            : (fetchErr.message || String(fetchErr)))
+        : "没有解析出任何节点（可能链接失效或格式不支持）";
+      const msg = `[${name}] 抓取受阻：${errMsg}`;
       warnings.push(msg);
       if (onProgress) onProgress({ type: 'error', message: msg });
       continue;
@@ -947,6 +974,13 @@ export async function generateConfig(
         message: `[${name}] 成功解析出 ${subNodes.length} 个可用节点`
       });
     }
+  }
+
+  if (cacheFile) {
+    try {
+      fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+      fs.writeFileSync(cacheFile, JSON.stringify(nodeCache), 'utf-8');
+    } catch {}
   }
 
   if (allProxies.length === 0) {

@@ -537,6 +537,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   currentOutputPath = await window.subfuse.getDefaultOutputPath();
+  // 启动时若已有生成好的配置，直接复用，不必重新合并（动态 token 链接失效也不影响）
+  const hasConfig = await window.subfuse.configFileExists(currentOutputPath);
+  if (hasConfig) {
+    generatedYaml = 'cached';
+    const badge = document.getElementById('merge-status-badge');
+    if (badge) {
+      badge.className = 'status-badge ready';
+      badge.textContent = '已有配置，可直接启动代理';
+    }
+  }
 
   // 恢复上一次的订阅链接，避免每次打开都要重新粘贴
   const savedSubs = loadSubscriptions();
