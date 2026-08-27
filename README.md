@@ -1,3 +1,4 @@
+<img width="884" height="794" alt="截屏2026-08-27 15 18 05" src="https://github.com/user-attachments/assets/20745b68-e3fc-41c1-a4a3-5173ac63b214" />
 <div align="center">
 
 <img src="assets/icon-128.png" width="96" height="96" alt="SubFuse Logo" />
