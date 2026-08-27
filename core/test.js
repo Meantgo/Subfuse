@@ -266,7 +266,7 @@ test("TestGenerateConfig - rule_smart_multi_process", async () => {
 
 
 test("TestSubscriptionParsing - deep_clash_yaml", () => {
-  const padding = "port: 7890\nsocks-port: 7891\nmode: rule\nlog-level: info\n" +
+  const padding = "port: 7897\nsocks-port: 7898\nmode: rule\nlog-level: info\n" +
     "dns:\n  enable: true\n  nameserver:\n    - 119.29.29.29\n    - 223.5.5.5\n";
   const yamlContent = padding + `
 proxies:

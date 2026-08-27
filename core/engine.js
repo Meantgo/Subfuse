@@ -1268,9 +1268,9 @@ export function writeConfigYaml(config) {
     "#   - 针对 Claude / ChatGPT / Cursor 等 AI 服务定向锁定稳定节点，彻底防止频繁跳 IP 导致封号\n\n"
   );
   const baseObj = {
-    port: 7890,
-    "socks-port": 7891,
-    "mixed-port": 7890,
+    port: 7897,
+    "socks-port": 7898,
+    "mixed-port": 7897,
     "allow-lan": false,
     // 关闭 IPv6：避免 IPv4/IPv6 走不同节点导致出口地区不一致，
     // 被 Google 等站点判定为「异常流量」并封禁。

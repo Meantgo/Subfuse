@@ -241,7 +241,7 @@ function switchMode(mode) {
   if (isConnected) {
     const statusText = document.getElementById('conn-status-text');
     const modeLabel = mode === 'auto' ? '自动规则模式' : '全局手动代理';
-    statusText.textContent = `已连接 · ${modeLabel} (端口 7890)`;
+    statusText.textContent = `已连接 · ${modeLabel} (端口 7897)`;
   }
 }
 
@@ -500,7 +500,7 @@ async function handleToggleConnect() {
 
     const modeLabel = currentMode === 'auto' ? '自动规则模式' : '全局代理模式';
     const procCount = allAdaptiveProcesses.length;
-    statusText.textContent = `已连接 · ${modeLabel} (端口 7890 · ${procCount} 进程接管)`;
+    statusText.textContent = `已连接 · ${modeLabel} (端口 7897 · ${procCount} 进程接管)`;
     showToast('代理已成功启动，网络已接管');
   }
 }

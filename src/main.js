@@ -326,7 +326,7 @@ function broadcastGuardianEvent(type, payload) {
 
 let proxyProcess = null;
 let proxyActive = false;
-let activeProxyPort = 7890;
+let activeProxyPort = 7897;
 let activeProxyMode = 'auto';
 
 function findMihomoBinary() {
@@ -352,7 +352,7 @@ function findMihomoBinary() {
   return null;
 }
 
-function setSystemProxy(enable, port = 7890) {
+function setSystemProxy(enable, port = 7897) {
   try {
     if (process.platform === 'darwin') {
       const services = ['Wi-Fi', 'Ethernet', 'iPhone USB'];
@@ -566,7 +566,7 @@ ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
     }
   }
 
-  setSystemProxy(true, 7890);
+  setSystemProxy(true, 7897);
   proxyActive = true;
   activeProxyMode = mode;
 
@@ -584,7 +584,7 @@ ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
   }
 
   const modeLabel = mode === 'global' ? '全局手动代理' : '全机自适应规则分流';
-  sendDesktopNotification("SubFuse 代理已启动", `已成功接入${modeLabel}，端口 7890 已接管网络`);
+  sendDesktopNotification("SubFuse 代理已启动", `已成功接入${modeLabel}，端口 7897 已接管网络`);
 
   return {
     success: true,
@@ -593,7 +593,7 @@ ipcMain.handle('start-proxy', async (_event, { configPath, mode = 'auto' }) => {
     warning: conflictClients
       ? `检测到其他代理客户端正在运行：${conflictClients}。请退出它们，只保留 SubFuse，否则可能出现端口冲突。`
       : null,
-    port: 7890,
+    port: 7897,
     hasCore: Boolean(binary),
     mode,
   };
