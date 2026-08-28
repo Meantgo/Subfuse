@@ -3,6 +3,7 @@ import path from 'node:path';
 import child_process from 'node:child_process';
 import http from 'node:http';
 import https from 'node:https';
+import zlib from 'node:zlib';
 import { URL } from 'node:url';
 import * as yamlModule from 'js-yaml';
 const yaml = yamlModule.default || yamlModule;
@@ -815,6 +816,7 @@ proxies:
           headers: {
             "User-Agent": DEFAULT_UA,
             "Accept": "*/*",
+            "Accept-Encoding": "gzip, deflate, br",
           },
           timeout,
         };
@@ -839,7 +841,19 @@ proxies:
           res.on("data", (c) => chunks.push(c));
           res.on("end", () => {
             const buf = Buffer.concat(chunks);
-            resResolve(buf.toString("utf-8"));
+            const enc = (res.headers["content-encoding"] || "").toString().toLowerCase().trim();
+            let out = buf;
+            if (enc) {
+              try {
+                if (enc === "gzip") out = zlib.gunzipSync(buf);
+                else if (enc === "deflate") out = zlib.inflateSync(buf);
+                else if (enc === "br") out = zlib.brotliDecompressSync(buf);
+              } catch (decompErr) {
+                // 解压失败则保留原始字节交给下游解析，避免误伤不支持该编码的服务器
+                out = buf;
+              }
+            }
+            resResolve(out.toString("utf-8"));
           });
         });
 
