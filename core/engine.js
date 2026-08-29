@@ -1178,6 +1178,9 @@ export async function generateConfig(
       "DOMAIN-SUFFIX,cloudcode-pa.googleapis.com,API自动切换",
       "DOMAIN-SUFFIX,daily-cloudcode-pa.googleapis.com,API自动切换",
       "DOMAIN-SUFFIX,generativelanguage.googleapis.com,API自动切换",
+      "DOMAIN-SUFFIX,oauth2.googleapis.com,API自动切换",
+      "DOMAIN-SUFFIX,accounts.google.com,API自动切换",
+      "DOMAIN-SUFFIX,accounts.googleusercontent.com,API自动切换",
     ];
     for (const r of builtInApiRules) {
       if (!processRuleLines.includes(r)) {
