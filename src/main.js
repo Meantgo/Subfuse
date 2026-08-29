@@ -107,6 +107,9 @@ const AI_GROUP_NAME = 'API自动切换';
 const MIHOMO_CTRL = 'http://127.0.0.1:9097';
 let cpaLogPos = 0;
 let lastAiSwitchAt = 0;
+let failoverAttemptCount = 0;
+let verifiedAiNode = null;
+const MAX_FAILOVER_ATTEMPTS = 6;
 let learnerIntervalId = null;
 let autoDirectDomains = new Set();
 const AUTO_DIRECT_FILE = path.join(app.getPath('userData'), 'auto-direct-domains.json');
@@ -248,18 +251,36 @@ function readCpaErrorsSinceLastCheck() {
   }
 }
 
-async function switchAiNode() {
+async function switchAiNode(preferred = null) {
   try {
     const listRes = await fetch(`${MIHOMO_CTRL}/proxies/${encodeURIComponent(AI_GROUP_NAME)}`);
     if (!listRes.ok) return null;
     const group = await listRes.json();
     const all = Array.isArray(group.all) ? group.all : [];
     const now = group.now;
+
+    // 优先使用之前验证过、已稳定工作的好节点
+    if (
+      preferred &&
+      preferred !== now &&
+      all.includes(preferred) &&
+      preferred !== 'DIRECT' &&
+      preferred !== '自动选择' &&
+      preferred !== '手动选择'
+    ) {
+      const putRes = await fetch(`${MIHOMO_CTRL}/proxies/${encodeURIComponent(AI_GROUP_NAME)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: preferred }),
+      });
+      if (putRes.ok) return preferred;
+    }
+
     const idx = all.indexOf(now);
     let next = null;
     for (let i = 1; i <= all.length; i++) {
       const cand = all[(idx + i) % all.length];
-      if (cand && cand !== 'DIRECT' && cand !== '自动选择' && cand !== '手动选择') {
+      if (cand && cand !== 'DIRECT' && cand !== '自动选择' && cand !== '手动选择' && cand !== now) {
         next = cand;
         break;
       }
@@ -280,15 +301,43 @@ async function aiFailoverTick() {
   if (!proxyActive) return;
   const nowMs = Date.now();
   if (nowMs - lastAiSwitchAt < 40000) return; // 防抖：40 秒内最多切换一次
-  if (!readCpaErrorsSinceLastCheck()) return;
+
+  if (!readCpaErrorsSinceLastCheck()) {
+    // 切换后一段时间内没有再出现地区/EOF 异常 → 当前节点是"好节点"，记住它
+    if (failoverAttemptCount > 0 && nowMs - lastAiSwitchAt > 120000) {
+      try {
+        const g = await fetch(`${MIHOMO_CTRL}/proxies/${encodeURIComponent(AI_GROUP_NAME)}`).then(r => r.json());
+        const cur = g.now;
+        if (cur && cur !== 'DIRECT' && cur !== '自动选择' && cur !== '手动选择') {
+          verifiedAiNode = cur;
+          failoverAttemptCount = 0;
+          console.log(`[SubFuse] API 出口节点 ${cur} 已稳定（未再出现地区限制），记为好节点`);
+        }
+      } catch {}
+    }
+    return;
+  }
 
   lastAiSwitchAt = nowMs;
-  const next = await switchAiNode();
-  // 切换节点后重启 CPA，强制重建到 Google 的连接（旧 keep-alive 仍走旧节点）
-  child_process.exec('brew services restart cliproxyapi', { timeout: 20000 }, () => {});
+  failoverAttemptCount++;
+  const next = await switchAiNode(verifiedAiNode);
+  if (next) {
+    // 切换节点后重启 CPA，强制重建到 Google 的连接（旧 keep-alive 仍走旧节点）
+    child_process.exec('brew services restart cliproxyapi', { timeout: 20000 }, () => {});
+  }
+
+  if (failoverAttemptCount >= MAX_FAILOVER_ATTEMPTS) {
+    failoverAttemptCount = 0;
+    sendDesktopNotification(
+      'API 出口持续地区受限',
+      '已连续尝试切换多个节点，仍被 Google 地区限制。你的机场节点多为数据中心 IP，Google 不认；建议改用「原生/家宽」节点，或走聚合站（jbb）转发通道。'
+    );
+    broadcastGuardianEvent('failover', { processName: 'Gemini API', newNode: next || '切换失败', exhausted: true });
+    return;
+  }
 
   const msg = next
-    ? `Gemini/API 出口异常，已自动切换到节点：${next}`
+    ? `Gemini/API 出口异常，已自动切换到节点：${next}（尝试 ${failoverAttemptCount}/${MAX_FAILOVER_ATTEMPTS}）`
     : 'Gemini/API 出口异常，尝试自动切换节点失败（请检查代理状态）';
   sendDesktopNotification('API 节点自动切换', msg);
   broadcastGuardianEvent('failover', { processName: 'Gemini API', newNode: next || '切换失败' });
