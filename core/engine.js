@@ -169,7 +169,7 @@ export function discoverProcesses(maxCount = 150) {
  * 获取本机真实运行的应用与进程，用于前端展示与自定义覆盖
  */
 export function getAdaptiveProcesses(customRules = []) {
-  const procs = discoverProcesses(150);
+  const procs = discoverProcesses(400);
   const result = [];
   const seen = new Set();
 
@@ -187,7 +187,7 @@ export function getAdaptiveProcesses(customRules = []) {
     });
   }
 
-  // 2. 扫描到的真实应用与进程
+  // 2. 扫描到的真实应用与进程（全部展示，未分类的也列出，便于用户查看与自定义）
   for (const pname of procs) {
     const lower = pname.toLowerCase();
     if (seen.has(lower)) continue;
@@ -205,22 +205,25 @@ export function getAdaptiveProcesses(customRules = []) {
       category = "proxy";
     }
 
-    if (category === "proxy" || category === "domestic") {
-      seen.add(lower);
-      let target = "auto";
-      if (policy === "DIRECT") {
-        target = "direct";
-      } else if (lower.includes("claude") || lower.includes("chatgpt") || lower.includes("cursor")) {
-        target = "fixed";
-      }
-      result.push({
-        name: pname,
-        target,
-        policy: policy === "DIRECT" ? "直连" : (target === "fixed" ? "固定节点" : "自动规则"),
-        category,
-        source: "discovered",
-      });
+    seen.add(lower);
+    let target = "auto";
+    if (policy === "DIRECT") {
+      target = "direct";
+    } else if (lower.includes("claude") || lower.includes("chatgpt") || lower.includes("cursor")) {
+      target = "fixed";
     }
+    let policyLabel = "自动规则";
+    if (category === "system") policyLabel = "系统·直连";
+    else if (category === "domestic") policyLabel = "国内·直连";
+    else if (category === "proxy") policyLabel = "代理";
+    else if (target === "fixed") policyLabel = "固定节点";
+    result.push({
+      name: pname,
+      target,
+      policy: policy === "DIRECT" ? "直连" : (target === "fixed" ? "固定节点" : (category === "unknown" ? "未分类·自动" : policyLabel)),
+      category,
+      source: "discovered",
+    });
   }
 
   return result;
